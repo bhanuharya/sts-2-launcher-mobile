@@ -195,13 +195,15 @@ port works differently:
    approve it**; Steam blocks approvals from the build machine's location,
    and the code already signed it in.
 3. After 40–60 minutes (the build also converts the game's textures to
-   ASTC), download the **StS2-ios-…** artifact from the run
-   (kept for 3 days). Open the zip inside it with **7-Zip** and your
+   ASTC), download from the run (kept for 3 days) the **StS2-ios-…-app**
+   artifact, and the `StS2-ios-…-pck-<bytes>` one unless the
+   `SlayTheSpire2.pck` already on your phone is exactly that many bytes
+   (same game version). Open the zip inside each with **7-Zip** and your
    `IPA_PASSWORD`.
 4. Install `StS2.ipa` with **Sideloadly** over USB. Then on the iPhone:
    **Settings → General → VPN & Device Management** → your Apple ID →
    **Trust**.
-5. Copy `SlayTheSpire2.pck` **from the same zip** (the build converts its
+5. If you downloaded it, copy `SlayTheSpire2.pck` **from the -pck- zip** (the build converts its
    BC textures to ASTC — Apple GPUs can't read BC — and the app checks that
    the file matches the build) into the app's folder: in the **Apple
    Devices** app (Windows 11) or **iTunes → File Sharing** (Windows 10),
