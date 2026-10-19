@@ -13,7 +13,9 @@
 #                game's .godot metadata (uid cache, script class cache)
 #   app-extra/   files copied next to the app executable (release_info.json)
 #   game.env     PCK_SIZE and GAME_VERSION, for ios_boot's version check,
-#                and PCK_REPACKED (1 if the textures were converted)
+#                STEAM_PCK_SIZE (the pck's size before any conversion, which
+#                ios_boot also accepts), and PCK_REPACKED (1 if the textures
+#                were converted)
 #
 # Env: REPACK_ASTC=1 also converts the pck's BC textures to ASTC first
 # (Apple GPUs can't sample BC, so Godot would expand them to raw RGBA in
@@ -35,9 +37,14 @@ PCK="$GAME_DIR/SlayTheSpire2.pck"
 DATA_DIR="$(find "$GAME_DIR" -maxdepth 1 -type d -name 'data_*' | head -1)"
 [ -n "$DATA_DIR" ] || fail "no data_* assemblies folder in $GAME_DIR"
 
+# The pck as Steam has it. The conversion below only rewrites texture data,
+# so ios_boot accepts this size too: a phone that already has Steam's file
+# can run a new build of the same game version without the converted one.
+STEAM_PCK_SIZE="$(python3 -c 'import os,sys; print(os.path.getsize(sys.argv[1]))' "$PCK")"
+
 # BC -> ASTC texture conversion, before anything records the pck's size
 # (ios_boot checks PCK_SIZE, so the app and the repacked pck must ship
-# together — the workflow puts this pck inside the encrypted artifact).
+# together — the workflow uploads this pck next to the app).
 PCK_REPACKED=0
 if [ "${REPACK_ASTC:-0}" = "1" ]; then
     if command -v astcenc >/dev/null 2>&1 || command -v astcenc-avx2 >/dev/null 2>&1 \
@@ -118,5 +125,6 @@ if [ -f "$GAME_DIR/release_info.json" ]; then
     GAME_VERSION="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(next((str(d[k]) for k in ("version","Version") if k in d), "unknown"))' "$GAME_DIR/release_info.json")"
 fi
 PCK_SIZE="$(python3 -c 'import os,sys; print(os.path.getsize(sys.argv[1]))' "$PCK")"
-printf 'PCK_SIZE=%s\nGAME_VERSION=%s\nPCK_REPACKED=%s\n' "$PCK_SIZE" "$GAME_VERSION" "$PCK_REPACKED" > "$WORK/game.env"
-log "Game version $GAME_VERSION, pck $PCK_SIZE bytes"
+printf 'PCK_SIZE=%s\nSTEAM_PCK_SIZE=%s\nGAME_VERSION=%s\nPCK_REPACKED=%s\n' \
+    "$PCK_SIZE" "$STEAM_PCK_SIZE" "$GAME_VERSION" "$PCK_REPACKED" > "$WORK/game.env"
+log "Game version $GAME_VERSION, pck $PCK_SIZE bytes (Steam's: $STEAM_PCK_SIZE)"

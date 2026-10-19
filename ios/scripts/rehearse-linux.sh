@@ -33,7 +33,7 @@ dotnet publish "$WORK/aot/sts2.csproj" -c ExportRelease -r linux-x64 --self-cont
     -p:PrebuiltDir="$WORK/prepare/prebuilt" -o "$WORK/aot/out"
 
 log "ios_boot (linux) + bootstrap pack"
-"$IOS/boot/build.sh" linux "$WORK/run" "$PCK_SIZE" "$GAME_VERSION"
+"$IOS/boot/build.sh" linux "$WORK/run" "$PCK_SIZE" "$GAME_VERSION" "$STEAM_PCK_SIZE"
 python3 "$IOS/tools/make_bootstrap.py" --overlay "$WORK/prepare/bootstrap" --addon "$IOS/boot/addon" \
     --out "$WORK/run/boot.pck"
 

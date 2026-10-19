@@ -130,15 +130,18 @@ A build has two downloads: `StS2-ios-<version>-run<N>-app` (the app) and
 `StS2-ios-<version>-run<N>-pck-<bytes>` (the game data, about 1 GB). The
 game data only changes when the game does: if the `SlayTheSpire2.pck`
 already on your phone is exactly `<bytes>` long (Files app → long-press →
-**Get Info**), download just the app.
+**Get Info**), download just the app. The app also runs on the same game
+version's pck as Steam has it (the run's summary gives its size): that
+saves the 1 GB download, but its textures aren't converted, so the game
+loads slower and uses more memory.
 
 1. Download the artifact(s), then open the zip inside each with **7-Zip**
    and your `IPA_PASSWORD`. (Windows Explorer can't open AES-encrypted zips.)
 2. Sideload `StS2.ipa` with Sideloadly, the same way as the probe. The app
    shows up as **StS2**.
 3. Copy the game data, if you downloaded it: the `SlayTheSpire2.pck` from the
-   **-pck-** download (with BC textures converted to ASTC — the app checks
-   that it matches the build, so use this one, not the PC's). It goes
+   **-pck-** download (with BC textures converted to ASTC; the PC's file
+   also works, but loads slower and uses more memory). It goes
    directly into the app's folder, which the Files app shows as **On My
    iPhone → StS2**:
    - **Windows 11:** in the **Apple Devices** app, select your iPhone → **Files** → **StS2** → drag the `.pck` in.

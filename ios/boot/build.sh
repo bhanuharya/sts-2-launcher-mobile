@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Builds the ios_boot GDExtension (pck mounter + Steam API/FMOD plugin stubs).
 #
-# Usage: build.sh <ios|linux> <out_dir> [expected_pck_size] [game_version]
+# Usage: build.sh <ios|linux> <out_dir> [expected_pck_size] [game_version] [steam_pck_size]
+#   steam_pck_size: the same game's pck as Steam has it, also accepted when
+#   expected_pck_size is a texture-converted copy (0 or equal: no second size)
 #   ios   -> <out_dir>/libios_boot.ios.dylib        (needs Xcode, macOS only)
 #   linux -> <out_dir>/libios_boot.linux.x86_64.so  (for local smoke tests)
 set -euo pipefail
@@ -12,11 +14,13 @@ PLATFORM="$1"
 OUT_DIR="$2"
 EXPECTED_SIZE="${3:-0}"
 GAME_VERSION="${4:-unknown}"
+STEAM_SIZE="${5:-0}"
 mkdir -p "$OUT_DIR"
 
 SOURCES=("$HERE/ios_boot.c" "$STUBS/steam_stub.c" "$STUBS/steam_stub_auto.c")
 DEFINES=(
     "-DIOS_BOOT_EXPECTED_PCK_SIZE=${EXPECTED_SIZE}LL"
+    "-DIOS_BOOT_STEAM_PCK_SIZE=${STEAM_SIZE}LL"
     "-DIOS_BOOT_GAME_VERSION=\"${GAME_VERSION}\""
 )
 CFLAGS=(-std=c11 -O2 -Wno-cast-function-type -I"$HERE/include")
@@ -38,4 +42,4 @@ case "$PLATFORM" in
         exit 1
         ;;
 esac
-echo "built ios_boot ($PLATFORM) in $OUT_DIR (expected pck size: $EXPECTED_SIZE, game: $GAME_VERSION)"
+echo "built ios_boot ($PLATFORM) in $OUT_DIR (expected pck size: $EXPECTED_SIZE, Steam's: $STEAM_SIZE, game: $GAME_VERSION)"

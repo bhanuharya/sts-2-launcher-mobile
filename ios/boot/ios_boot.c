@@ -33,6 +33,15 @@
 #define IOS_BOOT_EXPECTED_PCK_SIZE 0
 #endif
 
+// The same game version's pck as Steam has it, when the build converted its
+// textures (the expected size is then the converted copy's). Accepted too:
+// the conversion only rewrites texture data, so the game runs on either;
+// Steam's just loads slower and takes more memory, as Apple GPUs can't read
+// its BC textures and Godot expands them. 0 when there's no second size.
+#ifndef IOS_BOOT_STEAM_PCK_SIZE
+#define IOS_BOOT_STEAM_PCK_SIZE 0
+#endif
+
 #ifndef IOS_BOOT_GAME_VERSION
 #define IOS_BOOT_GAME_VERSION "unknown"
 #endif
@@ -159,16 +168,25 @@ static void mount_game_pack(void) {
 	char msg[1024];
 	struct stat st;
 	long long expected = (long long)IOS_BOOT_EXPECTED_PCK_SIZE;
+	long long steam = (long long)IOS_BOOT_STEAM_PCK_SIZE;
+	if (steam == expected)
+		steam = 0;
 	if (stat(path, &st) != 0) {
 		snprintf(msg, sizeof msg,
 				"missing|%s|Copy %s (game version %s) into this app's folder in the Files app, then reopen the game.",
 				path, IOS_BOOT_PCK_NAME, IOS_BOOT_GAME_VERSION);
 		log_line(1, msg);
 		show_status_screen(project_settings, msg);
-	} else if (expected > 0 && (long long)st.st_size != expected) {
-		snprintf(msg, sizeof msg,
-				"mismatch|%s|%s is %lld bytes but this build expects %lld bytes (game version %s). Copy the matching file, or rebuild the app for your game version.",
-				path, IOS_BOOT_PCK_NAME, (long long)st.st_size, expected, IOS_BOOT_GAME_VERSION);
+	} else if (expected > 0 && (long long)st.st_size != expected
+			&& !(steam > 0 && (long long)st.st_size == steam)) {
+		if (steam > 0)
+			snprintf(msg, sizeof msg,
+					"mismatch|%s|%s is %lld bytes but this build expects %lld bytes (textures converted for iPhone) or %lld bytes (as Steam has it), game version %s. Copy the matching file, or rebuild the app for your game version.",
+					path, IOS_BOOT_PCK_NAME, (long long)st.st_size, expected, steam, IOS_BOOT_GAME_VERSION);
+		else
+			snprintf(msg, sizeof msg,
+					"mismatch|%s|%s is %lld bytes but this build expects %lld bytes (game version %s). Copy the matching file, or rebuild the app for your game version.",
+					path, IOS_BOOT_PCK_NAME, (long long)st.st_size, expected, IOS_BOOT_GAME_VERSION);
 		log_line(1, msg);
 		show_status_screen(project_settings, msg);
 	} else {
@@ -181,7 +199,10 @@ static void mount_game_pack(void) {
 		ptrcall(load_pack, project_settings, args, &ok);
 		destroy_string(&pack);
 		if (ok) {
-			snprintf(msg, sizeof msg, "mounted|%s|%lld bytes", path, (long long)st.st_size);
+			snprintf(msg, sizeof msg, "mounted|%s|%lld bytes%s", path, (long long)st.st_size,
+					steam > 0 && (long long)st.st_size == steam
+							? " (as Steam has it: textures not converted, so slower loads and more memory)"
+							: "");
 			log_line(0, msg);
 			set_string_setting(project_settings, "ios_boot/status", msg);
 		} else {
