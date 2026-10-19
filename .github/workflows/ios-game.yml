@@ -225,14 +225,18 @@ jobs:
           echo "ARTIFACT_NAME=$NAME-app" >> "$GITHUB_ENV"
           echo "### StS2.ipa built for game ${GAME_VERSION}" >> "$GITHUB_STEP_SUMMARY"
           echo "It expects a SlayTheSpire2.pck of **${PCK_SIZE} bytes** in the app's folder." >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${STEAM_PCK_SIZE:-}" ] && [ "$STEAM_PCK_SIZE" != "$PCK_SIZE" ]; then
+            echo "It also runs on the same game version's pck as Steam has it (**${STEAM_PCK_SIZE} bytes**), with unconverted textures: slower loads and more memory." >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "$REPACK_ASTC" = "1" ]; then
             # The pck goes with the app: ios_boot size-checks it against this
-            # build, so copy this one, not the PC's file. Its size is in the
-            # artifact's name, to compare with the one already on the phone.
+            # build (this one, or Steam's own of the same version). Its size
+            # is in the artifact's name, to compare with the one already on
+            # the phone.
             7z a -tzip -mem=AES256 -mx=1 -p"$IPA_PASSWORD" "upload/pck/$NAME-pck.zip" "$HOME/game/SlayTheSpire2.pck" > /dev/null
             echo "PCK_ARTIFACT_NAME=$NAME-pck-$PCK_SIZE" >> "$GITHUB_ENV"
             if [ "${PCK_REPACKED:-0}" = "1" ]; then
-              echo "Download **$NAME-app** for the app. If the SlayTheSpire2.pck on your phone isn't exactly ${PCK_SIZE} bytes, also download **$NAME-pck-$PCK_SIZE** (BC textures converted to ASTC) and copy it into the app's folder." >> "$GITHUB_STEP_SUMMARY"
+              echo "Download **$NAME-app** for the app. If the SlayTheSpire2.pck on your phone is neither ${PCK_SIZE} nor ${STEAM_PCK_SIZE} bytes, also download **$NAME-pck-$PCK_SIZE** (BC textures converted to ASTC, the faster one) and copy it into the app's folder." >> "$GITHUB_STEP_SUMMARY"
             else
               echo "Download **$NAME-app** for the app. If the SlayTheSpire2.pck on your phone isn't exactly ${PCK_SIZE} bytes, also download **$NAME-pck-$PCK_SIZE**; its textures were **not** converted (see the Build StS2.ipa log)." >> "$GITHUB_STEP_SUMMARY"
             fi

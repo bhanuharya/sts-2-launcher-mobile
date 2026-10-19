@@ -39,7 +39,7 @@ export PrebuiltDir="$WORK/prebuilt"
 
 mkdir -p "$PROJ/addons/ios_boot"
 cp "$IOS/boot/addon/"* "$PROJ/addons/ios_boot/"
-"$IOS/boot/build.sh" ios "$PROJ/addons/ios_boot" "$PCK_SIZE" "$GAME_VERSION"
+"$IOS/boot/build.sh" ios "$PROJ/addons/ios_boot" "$PCK_SIZE" "$GAME_VERSION" "$STEAM_PCK_SIZE"
 "$IOS/scripts/fetch-gdextensions.sh" "$PROJ/addons" "${EXT_CACHE:-$WORK/ext-cache}"
 
 log "Building the app"
@@ -73,4 +73,4 @@ if ! grep -q ' _load_all_fmod_plugins$' <<<"$EXPORTS"; then
 fi
 rm -rf "$CHECK"
 log "load_all_fmod_plugins is exported by the app executable"
-log "Built StS2.ipa for game $GAME_VERSION (expects SlayTheSpire2.pck of $PCK_SIZE bytes)"
+log "Built StS2.ipa for game $GAME_VERSION (expects SlayTheSpire2.pck of $PCK_SIZE bytes, or Steam's $STEAM_PCK_SIZE)"
