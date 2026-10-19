@@ -11,7 +11,9 @@ name: iOS game build
 #   because GitHub's runners are far from you.) With a STEAM_REFRESH_TOKEN
 #   secret from `SteamFetch login` (ios/tools/SteamFetch) it needs neither.
 #   The .ipa holds compiled game code and this repo is public, so it is only
-#   uploaded inside a zip encrypted with the IPA_PASSWORD secret.
+#   uploaded inside a zip encrypted with the IPA_PASSWORD secret. The app and
+#   the converted SlayTheSpire2.pck are separate downloads (StS2-ios-...-app,
+#   StS2-ios-...-pck-<bytes>), so a rebuild for the same game needs only the app.
 #
 # Pushes to ios/** run source = fake: the same pipeline on the stand-in game
 # in ios/test, with no secrets and no game files, to catch breakage early.
@@ -212,21 +214,27 @@ jobs:
           command -v 7z >/dev/null || brew install p7zip
           source build/game/work/game.env
           NAME="StS2-ios-${GAME_VERSION}-run${GITHUB_RUN_NUMBER}"
-          mkdir -p upload
-          # -mx=1: both payloads are already compressed; this zip is for
+          # Two downloads: the app, and the game data that goes with it. The
+          # data only changes with the game, so a rebuild of the same game
+          # version needs just the app.
+          mkdir -p upload/app upload/pck
+          # -mx=1: both payloads are already compressed; these zips are for
           # encryption, not compression.
-          7z a -tzip -mem=AES256 -mx=1 -p"$IPA_PASSWORD" "upload/$NAME.zip" ./build/game/StS2.ipa > /dev/null
+          7z a -tzip -mem=AES256 -mx=1 -p"$IPA_PASSWORD" "upload/app/$NAME-app.zip" ./build/game/StS2.ipa > /dev/null
           rm -f build/game/StS2.ipa
-          echo "ARTIFACT_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "ARTIFACT_NAME=$NAME-app" >> "$GITHUB_ENV"
           echo "### StS2.ipa built for game ${GAME_VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "It expects a SlayTheSpire2.pck of **${PCK_SIZE} bytes** in the app's folder." >> "$GITHUB_STEP_SUMMARY"
           if [ "$REPACK_ASTC" = "1" ]; then
             # The pck goes with the app: ios_boot size-checks it against this
-            # build, so copy this one, not the PC's file.
-            7z a -tzip -mem=AES256 -mx=1 -p"$IPA_PASSWORD" "upload/$NAME.zip" "$HOME/game/SlayTheSpire2.pck" > /dev/null
+            # build, so copy this one, not the PC's file. Its size is in the
+            # artifact's name, to compare with the one already on the phone.
+            7z a -tzip -mem=AES256 -mx=1 -p"$IPA_PASSWORD" "upload/pck/$NAME-pck.zip" "$HOME/game/SlayTheSpire2.pck" > /dev/null
+            echo "PCK_ARTIFACT_NAME=$NAME-pck-$PCK_SIZE" >> "$GITHUB_ENV"
             if [ "${PCK_REPACKED:-0}" = "1" ]; then
-              echo "Copy **SlayTheSpire2.pck from this zip** (BC textures converted to ASTC) into the app's folder." >> "$GITHUB_STEP_SUMMARY"
+              echo "Download **$NAME-app** for the app. If the SlayTheSpire2.pck on your phone isn't exactly ${PCK_SIZE} bytes, also download **$NAME-pck-$PCK_SIZE** (BC textures converted to ASTC) and copy it into the app's folder." >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "Copy **SlayTheSpire2.pck from this zip** into the app's folder. Its textures were **not** converted (see the Build StS2.ipa log)." >> "$GITHUB_STEP_SUMMARY"
+              echo "Download **$NAME-app** for the app. If the SlayTheSpire2.pck on your phone isn't exactly ${PCK_SIZE} bytes, also download **$NAME-pck-$PCK_SIZE**; its textures were **not** converted (see the Build StS2.ipa log)." >> "$GITHUB_STEP_SUMMARY"
             fi
           else
             echo "Copy SlayTheSpire2.pck from your Steam install (${PCK_SIZE} bytes) into the app's folder." >> "$GITHUB_STEP_SUMMARY"
@@ -235,16 +243,25 @@ jobs:
       - name: Stage fake-game IPA
         if: env.SOURCE == 'fake'
         run: |
-          mkdir -p upload
-          cp build/game/StS2.ipa upload/StS2-fakegame.ipa
-          cp "$HOME/game/SlayTheSpire2.pck" upload/
+          mkdir -p upload/app
+          cp build/game/StS2.ipa upload/app/StS2-fakegame.ipa
+          cp "$HOME/game/SlayTheSpire2.pck" upload/app/
           echo "ARTIFACT_NAME=StS2-fakegame-run${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
-      - name: Upload
+      - name: Upload the app
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: upload/
+          path: upload/app/
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload the game data
+        if: env.PCK_ARTIFACT_NAME != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PCK_ARTIFACT_NAME }}
+          path: upload/pck/
           if-no-files-found: error
           retention-days: 3
 
